@@ -1,37 +1,23 @@
 const TelegramBot = require('node-telegram-bot-api');
-const { OpenAI } = require('openai');
+const { GoogleGenerativeAI } = require('@google/generative-ai');
 
 const bot = new TelegramBot(process.env.TELEGRAM_BOT_TOKEN, { polling: true });
-const ai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
 bot.on('message', async (msg) => {
     const chatId = msg.chat.id;
     const text = msg.text;
-    const replyMsg = msg.reply_to_message?.text;
 
-    if (!text && !replyMsg) return;
-
-    let mode = "chat";
-    const lower = (text || "").toLowerCase();
-
-    if (lower.includes("create") || lower.includes("plugin") || lower.includes("ഉണ്ടാക്ക്")) {
-        mode = "plugin";
-    } 
-    else if (lower.includes("fix") || lower.includes("correct") || lower.includes("ശരി")) {
-        mode = "fix";
-    } 
-    else if (lower.includes("error") || lower.includes("issue") || lower.includes("problem")) {
-        mode = "explain";
-    }
+    if (!text) return;
 
     try {
-        let messages = [];
+        let prompt = "";
 
-        if (mode === "plugin") {
-            messages = [
-                {
-                    role: "system",
-                    content: `You are an expert Raganork-MD WhatsApp bot plugin developer.
+        if (text.toLowerCase().includes("plugin")) {
+            prompt = `
+You are an expert Raganork-MD WhatsApp bot plugin developer.
 
 Rules:
 - Return ONLY JavaScript code
@@ -40,62 +26,18 @@ Rules:
 - Proper pattern, desc, use, usage
 - Use message.sendMessage
 - Add error handling
-- Use streams for media`
-                },
-                {
-                    role: "user",
-                    content: text
-                }
-            ];
+- Use streams for media
+
+User request: ${text}
+`;
+        } else {
+            prompt = `You are a friendly AI. Reply normally:\n${text}`;
         }
 
-        else if (mode === "fix") {
-            messages = [
-                {
-                    role: "system",
-                    content: `Fix this Raganork plugin code. Return ONLY corrected code.`
-                },
-                {
-                    role: "user",
-                    content: replyMsg || text
-                }
-            ];
-        }
+        const result = await model.generateContent(prompt);
+        let reply = result.response.text();
 
-        else if (mode === "explain") {
-            messages = [
-                {
-                    role: "system",
-                    content: `Explain clearly in user's language.`
-                },
-                {
-                    role: "user",
-                    content: replyMsg || text
-                }
-            ];
-        }
-
-        else {
-            messages = [
-                {
-                    role: "system",
-                    content: `You are a friendly AI assistant.`
-                },
-                {
-                    role: "user",
-                    content: text
-                }
-            ];
-        }
-
-        const response = await ai.chat.completions.create({
-            model: "gpt-3.5-turbo",
-            messages: messages
-        });
-
-        let reply = response.choices[0].message.content;
-
-        if (mode === "plugin" || mode === "fix") {
+        if (text.toLowerCase().includes("plugin")) {
             reply = "```js\n" + reply + "\n```";
         }
 
