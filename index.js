@@ -1,8 +1,8 @@
 const TelegramBot = require('node-telegram-bot-api');
 const { OpenAI } = require('openai');
 
-const bot = new TelegramBot(process.env.YOUR_TELEGRAM_TOKEN, { polling: true });
-const ai = new OpenAI({ apiKey: process.env.YOUR_OPENAI_KEY });
+const bot = new TelegramBot(process.env.TELEGRAM_BOT_TOKEN, { polling: true });
+const ai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 bot.on('message', async (msg) => {
     const chatId = msg.chat.id;
@@ -31,19 +31,16 @@ bot.on('message', async (msg) => {
             messages = [
                 {
                     role: "system",
-                    content: `
-You are an expert Raganork-MD WhatsApp bot plugin developer.
+                    content: `You are an expert Raganork-MD WhatsApp bot plugin developer.
 
 Rules:
 - Return ONLY JavaScript code
 - No explanation
-- No gist
 - Use Module from '../main'
 - Proper pattern, desc, use, usage
 - Use message.sendMessage
 - Add error handling
-- Use streams for media
-`
+- Use streams for media`
                 },
                 {
                     role: "user",
@@ -56,14 +53,7 @@ Rules:
             messages = [
                 {
                     role: "system",
-                    content: `
-You are an expert Raganork plugin debugger.
-
-Rules:
-- Fix the plugin code
-- Return ONLY corrected code
-- No explanation
-`
+                    content: `Fix this Raganork plugin code. Return ONLY corrected code.`
                 },
                 {
                     role: "user",
@@ -76,11 +66,7 @@ Rules:
             messages = [
                 {
                     role: "system",
-                    content: `
-You are a coding assistant.
-
-Reply in user's language and explain clearly.
-`
+                    content: `Explain clearly in user's language.`
                 },
                 {
                     role: "user",
@@ -93,11 +79,7 @@ Reply in user's language and explain clearly.
             messages = [
                 {
                     role: "system",
-                    content: `
-You are a friendly AI assistant.
-
-Reply in user's language.
-`
+                    content: `You are a friendly AI assistant.`
                 },
                 {
                     role: "user",
@@ -107,7 +89,7 @@ Reply in user's language.
         }
 
         const response = await ai.chat.completions.create({
-            model: "gpt-4o-mini",
+            model: "gpt-3.5-turbo",
             messages: messages
         });
 
@@ -117,9 +99,10 @@ Reply in user's language.
             reply = "```js\n" + reply + "\n```";
         }
 
-        bot.sendMessage(chatId, reply, { parse_mode: "Markdown" });
+        await bot.sendMessage(chatId, reply, { parse_mode: "Markdown" });
 
     } catch (err) {
-        bot.sendMessage(chatId, "Error 😢");
+        console.log("ERROR:", err);
+        await bot.sendMessage(chatId, "Error 😢 check logs");
     }
 });
